@@ -1,4 +1,8 @@
 # Ignore the following files:
 
+# Ignore the following folders:
+envTumOwl
+
 # Ignore the following file types:
 **.pyc
+**log.txt

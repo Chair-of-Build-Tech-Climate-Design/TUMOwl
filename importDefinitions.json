@@ -1,0 +1,21 @@
+{
+    "Type": "Trnsys",
+    "Settings": {
+      "RenameColumns": true
+    },
+    "RenameDictionary": [
+      {
+        "Column": "TIME",
+        "Rename": "TIME-NEW"
+      },
+      {
+        "Column": "Column2",
+        "Rename": "RenamedColumn2"
+      },
+      {
+        "Column": "Column3",
+        "Rename": "RenamedColumn3"
+      }
+    ]
+  }
+  
