@@ -1,7 +1,8 @@
 {
   "Trnsys": {
     "Settings": {
-      "RenameColumns": true
+      "RenameColumns": true,
+      "Separator": "\t"
     },
     "RenameDictionary": [
       {
@@ -20,7 +21,8 @@
   },
   "AnotherType": {
     "Settings": {
-      "RenameColumns": false
+      "RenameColumns": false,
+      "Separator": ","
     },
     "RenameDictionary": [
       {
