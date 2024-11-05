@@ -26,20 +26,6 @@ class SimulationResultsImporter:
 
         self.df = None
 
-    # def loadJsonConfig(self) -> dict:
-    #     """Loads the JSON configuration file."""
-    #     try:
-    #         with open(self.json_config_path, 'r') as f:
-    #             config = json.load(f)
-    #             self.logger.log(f"Configuration loaded successfully from {self.json_config_path}.")
-    #             return config
-    #     except FileNotFoundError:
-    #         self.logger.log(f"Configuration file not found at {self.json_config_path}.", log_level=LogLevel.ERROR)
-    #         return {}
-    #     except json.JSONDecodeError:
-    #         self.logger.log(f"Invalid JSON format in configuration file at {self.json_config_path}.", log_level=LogLevel.ERROR)
-    #         return {}
-
     def getSeperator(self) -> str:
         """Retrieves the separator setting from the loaded config."""
         type_config = self.config.get(self.data_type)

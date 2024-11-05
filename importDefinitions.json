@@ -24,15 +24,6 @@
       "RenameColumns": false,
       "Separator": ","
     },
-    "RenameDictionary": [
-      {
-        "Column": "ColumnA",
-        "Rename": "RenamedColumnA"
-      },
-      {
-        "Column": "ColumnB",
-        "Rename": "RenamedColumnB"
-      }
-    ]
+    "RenameDictionary": []
   }
 }
