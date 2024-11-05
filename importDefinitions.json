@@ -1,5 +1,5 @@
 {
-    "Type": "Trnsys",
+  "Trnsys": {
     "Settings": {
       "RenameColumns": true
     },
@@ -17,5 +17,20 @@
         "Rename": "RenamedColumn3"
       }
     ]
+  },
+  "AnotherType": {
+    "Settings": {
+      "RenameColumns": false
+    },
+    "RenameDictionary": [
+      {
+        "Column": "ColumnA",
+        "Rename": "RenamedColumnA"
+      },
+      {
+        "Column": "ColumnB",
+        "Rename": "RenamedColumnB"
+      }
+    ]
   }
-  
+}
