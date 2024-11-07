@@ -1,11 +1,13 @@
 #---------------------------------------------------------------------
-# This .py is used to defined for data import functions.
+# This .py is used to defined everything regarding the result files
+# import and data handling.
 
 #---------------------------------------------------------------------
 
 import pandas as pd
 import json
 from pandas import DataFrame
+import numpy as np
 
 from modules.utils import *
 
@@ -14,7 +16,7 @@ print("--> Importing Import Functions from 'imports.py'.")
 # REVISIT: Create more profiles and adjsut it to a proper import, considering the units as a secondary column or attach them directly to the column?
 # REVISIT: Remove all undefined erros, by defining variables properly.
 
-class SimulationResultsImporter:
+class Importer:
     def __init__(self, file_path: str, json_config_path: str, data_type: str = 'Trnsys', log_file_path: str = 'log.txt'):
         self.file_path = file_path
         self.json_config_path = json_config_path
@@ -107,42 +109,5 @@ def printAvailableTypes(json_config_path: str):
         return
 
     available_types = list(config.keys())
-    types_list = ", ".join(available_types)  # Join types as a comma-separated string
+    types_list = ", ".join(available_types) 
     logger.log(f"Available types in the JSON configuration: [{types_list}]")
-
-
-
-class WeatherDataImporter:
-    def __init__(self, file_path: str, log_file_path: str = 'log.txt'):
-        self.file_path = file_path
-        self.logger = Logger(log_file_path)
-        self.df = None
-        self.supported_filetypes = {
-            '.epw': self._read_epw,
-            # REVISIT: Add more file extensions and corresponding methods as you define them
-        }
-
-    def import_file(self) -> pd.DataFrame:
-        """Loads the weather data based on file extension and returns a DataFrame."""
-        file_extension = os.path.splitext(self.file_path)[1].lower()
-        
-        if file_extension in self.supported_filetypes:
-            self.logger.log(f"File extension '{file_extension}' recognized. Using the appropriate method.")
-            self.df = self.supported_filetypes[file_extension]()
-        else:
-            self.logger.log(f"Unsupported file type: '{file_extension}'. Supported types are: {list(self.supported_filetypes.keys())}", log_level=LogLevel.ERROR)
-            raise ValueError(f"Unsupported file type: '{file_extension}'")
-        
-        return self.df 
-
-    def _read_epw(self) -> pd.DataFrame:
-        """Reads EPW file format with ',' as the separator."""
-        self.logger.log("Reading EPW file format.")
-        try:
-            df = pd.read_csv(self.file_path, sep=',', header=None, skiprows=8) #REVISIT: Instead of skip, store the information somewhere?
-            #REVISIT Adjust here now the column headers and datatypes properly
-            self.logger.log("EPW file read successfully.")
-            return df
-        except Exception as e:
-            self.logger.log(f"Failed to read EPW file: {e}", log_level=LogLevel.ERROR)
-            raise
