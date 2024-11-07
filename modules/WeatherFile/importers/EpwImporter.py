@@ -1,56 +1,29 @@
-
-#---------------------------------------------------------------------
-# This .py is used to defined everything regarding the waether files
-# import and data handling.
-
-#---------------------------------------------------------------------
-
 import pandas as pd
-import json
-from pandas import DataFrame
 import numpy as np
-
 from modules.utils import *
+from typing import TypedDict, Optional, Dict, Union
 
-class Metadata:
-    def __init__(self, longitude=0.0, latitude=200.0, elevation=4.0):
-        self.longitude = longitude
-        self.latitude = latitude
-        self.elevation = elevation
-        # Add more metadata attributes as needed
+from modules.utils import Logger
+from modules.WeatherFile.WeatherFile import Metadata, WeatherFile
 
-class WeatherFile:
-    def __init__(self, file_path: str, data: pd.DataFrame, metadata: Metadata):
+class ColumnMetadata(TypedDict, total=False):
+    name: str
+    error_value: Optional[Union[int, float]]
+    unit: str
+    dtype: Optional[str]
+    min_value: Optional[float]
+    max_value: Optional[float]
+
+class EPWImporter:
+    def __init__(self, file_path: str, logger: Logger):
         self.file_path = file_path
-        self.data = data
-        self.metadata = metadata
-
-class Importer:
-    def __init__(self, file_path: str, log_file_path: str = 'log.txt'):
-        self.file_path = file_path
-        self.logger = Logger(log_file_path)
-        self.supported_filetypes = {
-            '.epw': self._read_epw,
-            # Add more file extensions and methods as needed
-        }
+        self.logger = logger
 
     def import_file(self) -> WeatherFile:
-        """Loads the weather data based on file extension and returns a WeatherFile object."""
-        file_extension = os.path.splitext(self.file_path)[1].lower()
-        
-        if file_extension in self.supported_filetypes:
-            data, metadata = self.supported_filetypes[file_extension]()
-        else:
-            self.logger.log(f"Unsupported file type: '{file_extension}'. Supported types are: {list(self.supported_filetypes.keys())}", log_level=LogLevel.ERROR)
-            raise ValueError(f"Unsupported file type: '{file_extension}'")
-        
-        return WeatherFile(self.file_path, data, metadata)
+        """Reads EPW file, processes data, and returns a WeatherFile object."""
+        self.logger.log("Reading EPW file format...")
 
-    def _read_epw(self) -> pd.DataFrame:
-        """Reads EPW file format with ',' as the separator, handles missing values, and checks data validity."""
-        self.logger.log("Reading EPW file format, checking data based on the given EPW Data Dictionary: https://bigladdersoftware.com/epx/docs/8-3/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html#energyplus-weather-file-epw-data-dictionary .")
-
-        column_metadata = {
+        column_metadata: Dict[str, ColumnMetadata] = {
         "Year":                                     {"name": "Year", "error_value": None, "unit": "YYYY"},
         "Month":                                    {"name": "Month", "error_value": None, "unit": "MM"},
         "Day":                                      {"name": "Day", "error_value": None, "unit": "DD"},
@@ -88,45 +61,33 @@ class Importer:
         "Liquid Precipitation Quantity":            {"name": "Liquid Precipitation Quantity", "error_value": 99, "unit": "hr"}
         }
 
-        column_names = list(column_metadata.keys())
-
-        metadata = Metadata(
-            longitude=0.0,  
-            latitude=500.0,
-            elevation=3.0,
-            # Add other metadata
-        )
+        metadata = Metadata(longitude=0.0, latitude=500.0, elevation=3.0)  
 
         try:
             df = pd.read_csv(self.file_path, sep=',', header=None, skiprows=8)
-            df.columns = column_names[:df.shape[1]]
-
-            # Apply transformations
-            self._applyDataTypes(df, column_metadata)
+            df.columns = list(column_metadata.keys())[:df.shape[1]]
+            self._apply_data_types(df, column_metadata)
             self._replace_error_values(df, column_metadata)
             self._validate_ranges(df, column_metadata)
             self._log_missing_values(df, column_metadata)
 
             self.logger.log("EPW file read and processed successfully.")
-            return df, metadata
-
+            return WeatherFile(self.file_path, df, metadata)
         except Exception as e:
             self.logger.log(f"Failed to read EPW file: {e}", log_level=LogLevel.ERROR)
             raise
 
-    def _applyDataTypes(self, df, column_metadata):
-        """Enforces data types for each column based on column metadata, defaulting to int if dtype is unspecified."""
+    def _apply_data_types(self, df, column_metadata):
         for col, meta in column_metadata.items():
             if col in df.columns:
                 dtype = meta.get("dtype", "int")
                 try:
-                    df[col] = df[col].astype(dtype)
-                except ValueError:
-                    self.logger.log(f"Could not convert {col} to {dtype} due to incompatible values. Applying coercion.")
                     if dtype in ["float", "int"]:
-                        df[col] = pd.to_numeric(df[col], errors="coerce")
+                        df[col] = pd.to_numeric(df[col], errors="coerce").astype(dtype)
                     else:
-                        df[col] = df[col].astype("str")
+                        df[col] = df[col].astype(dtype)
+                except ValueError:
+                    self.logger.log(f"Could not convert {col} to {dtype}. Applying coercion.", log_level=LogLevel.ERROR)
 
     def _replace_error_values(self, df, column_metadata):
         for col, meta in column_metadata.items():
@@ -136,28 +97,15 @@ class Importer:
     def _validate_ranges(self, df, column_metadata):
         for col, meta in column_metadata.items():
             out_of_bounds = pd.Series([False] * len(df))
-            
             if col in df.columns:
                 if "min_value" in meta:
                     out_of_bounds |= (df[col] < meta["min_value"])
                 if "max_value" in meta:
                     out_of_bounds |= (df[col] > meta["max_value"])
-                
-                out_of_bounds_count = out_of_bounds.sum()
-                
                 df.loc[out_of_bounds, col] = np.nan
-
-                if out_of_bounds_count > 0:
-                    total_count = len(df[col])
-                    self.logger.log(f"{meta['name']} has {out_of_bounds_count} out-of-range values out of {total_count} total values.")
 
     def _log_missing_values(self, df, column_metadata):
         for col in df.columns:
             missing_count = df[col].isna().sum()
             if missing_count > 0:
-                total_count = len(df[col])
-                self.logger.log(f"{column_metadata[col]['name']} has {missing_count} missing values out of {total_count} total values.")
-
-
-
-            # DWD Daten Import
+                self.logger.log(f"{col} has {missing_count} missing values.", log_level=LogLevel.ERROR)
